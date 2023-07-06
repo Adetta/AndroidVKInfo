@@ -1,16 +1,22 @@
 package com.example.vkinfo;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.example.vkinfo.utils.NetworkUtils.generateURL;
 import static com.example.vkinfo.utils.NetworkUtils.getResponseFromUrl;
 
@@ -23,18 +29,27 @@ public class MainActivity extends AppCompatActivity {
     private Button searchButton;
     private TextView result;
     private TextView errorMessage;
+    private ProgressBar loadingIndicator;
+    private RecyclerView numbersList;
+    private UserAdapter numbersAdapter;
 
     private void showResultTextView(){
-        result.setVisibility(View.VISIBLE);
+       // result.setVisibility(View.VISIBLE);
         errorMessage.setVisibility(View.INVISIBLE);
     }
 
     private void showErrorTextView(){
-        result.setVisibility(View.INVISIBLE);
+        //result.setVisibility(View.INVISIBLE);
         errorMessage.setVisibility(View.VISIBLE);
     }
 
+    //TODO remove deprecated AsynTask
     class VKQueryTask extends AsyncTask<URL, Void, String>{
+
+        @Override
+        protected void onPreExecute() {
+            loadingIndicator.setVisibility(View.VISIBLE);
+        }
 
         @Override
         protected String doInBackground(URL... urls) {
@@ -56,15 +71,19 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     JSONObject jsonResponse = new JSONObject(response);
                     JSONArray jsonArray = jsonResponse.getJSONArray("response");
-                    JSONObject userInfo = jsonArray.getJSONObject(0);
 
-                    firstName = userInfo.getString("first_name");
-                    lastName = userInfo.getString("last_name");
+                    List<PersonInfo> infos = new ArrayList<PersonInfo>(jsonArray.length());
 
-                    String stringResult = "Name: " + firstName + "\n" +
-                            "Last name; " + lastName;
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject userInfo = jsonArray.getJSONObject(i);
+                        firstName = userInfo.getString("first_name");
+                        lastName = userInfo.getString("last_name");
 
-                    result.setText(stringResult);
+                        PersonInfo info = new PersonInfo(firstName, lastName);
+                        infos.add(info);
+                    }
+                    numbersAdapter = new UserAdapter(infos);
+                    numbersList.setAdapter(numbersAdapter);
                     showResultTextView();
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -74,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
             else {
                 showErrorTextView();
             }
+            loadingIndicator.setVisibility(View.INVISIBLE);
         }
     }
 
@@ -86,6 +106,17 @@ public class MainActivity extends AppCompatActivity {
         searchButton = findViewById(R.id.b_search_vk);
         result = findViewById(R.id.tv_result);
         errorMessage = findViewById(R.id.tv_error_message);
+        loadingIndicator = findViewById(R.id.pb_loading_indicator);
+
+        numbersList = findViewById(R.id.rv_numbers);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        numbersList.setLayoutManager(layoutManager);
+        //знаем взаранее размер списка, улучщение памяти
+        numbersList.setHasFixedSize(true);
+
+       // numbersAdapter = new NumbersAdapter(100);
+        //numbersList.setAdapter(numbersAdapter);
+
 
         View.OnClickListener onClickListener = new View.OnClickListener() {
             @Override
